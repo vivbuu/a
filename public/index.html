@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Змейка-дуэль</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            background: #1a1a2e;
+            font-family: monospace;
+            color: white;
+            text-align: center;
+        }
+        canvas { border: 2px solid #e94560; border-radius: 8px; background: #16213e; }
+        #scores { display: flex; justify-content: center; gap: 40px; margin: 10px 0; }
+        .p1 { color: #00ff88; }
+        .p2 { color: #ff6b6b; }
+        button {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        input {
+            padding: 8px;
+            border-radius: 6px;
+            border: 2px solid #e94560;
+            background: #16213e;
+            color: white;
+            font-size: 14px;
+            text-align: center;
+        }
+        #menu { margin: 15px 0; }
+        #status { color: #f0c929; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h2>🐍 Змейка-дуэль</h2>
+    <div id="menu">
+        <button onclick="create()">Создать игру</button>
+        <br>
+        <input id="codeInput" placeholder="Код комнаты">
+        <button onclick="join()">Войти</button>
+    </div>
+    <div id="status">Создай комнату или введи код друга</div>
+    <div id="gameArea" class="hidden">
+        <div id="scores">
+            <div class="p1">Ты: <span id="myScore">0</span></div>
+            <div class="p2">Враг: <span id="enemyScore">0</span></div>
+        </div>
+        <canvas id="game"></canvas>
+        <div id="winner"></div>
+    </div>
+
+    <script>
+        let ws, playerId, roomCode;
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const SIZE = 25;
+        const W = 30, H = 20;
+        canvas.width = W * SIZE;
+        canvas.height = H * SIZE;
+
+        let gameState = null;
+
+        function create() {
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${location.host}`);
+            ws.onopen = () => ws.send(JSON.stringify({ type: 'create' }));
+            ws.onmessage = e => {
+                const d = JSON.parse(e.data);
+                if (d.type === 'created') {
+                    roomCode = d.code;
+                    playerId = d.playerId;
+                    document.getElementById('status').textContent = `Код комнаты: ${roomCode} (жди друга)`;
+                    document.getElementById('codeInput').value = roomCode;
+                }
+                handleMessage(d);
+            };
+        }
+
+        function join() {
+            const code = document.getElementById('codeInput').value.trim();
+            if (!code) return;
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${location.host}`);
+            ws.onopen = () => ws.send(JSON.stringify({ type: 'join', code }));
+            ws.onmessage = e => {
+                const d = JSON.parse(e.data);
+                if (d.type === 'error') alert(d.msg);
+                else if (d.type === 'start') {
+                    playerId = d.playerId;
+                    document.getElementById('menu').classList.add('hidden');
+                    document.getElementById('gameArea').classList.remove('hidden');
+                    document.getElementById('status').textContent = 'Игра началась!';
+                }
+                handleMessage(d);
+            };
+        }
+
+        function handleMessage(d) {
+            if (d.type === 'update') gameState = d;
+            if (d.type === 'winner') {
+                document.getElementById('winner').textContent = d.playerId === playerId ? 'Ты победил!' : 'Ты проиграл!';
+            }
+            if (d.type === 'draw') document.getElementById('winner').textContent = 'Ничья!';
+            if (d.type === 'opponent_left') document.getElementById('status').textContent = 'Соперник вышел';
+        }
+
+        document.addEventListener('keydown', e => {
+            if (!ws) return;
+            const dirs = { ArrowUp: [0,-1], ArrowDown: [0,1], ArrowLeft: [-1,0], ArrowRight: [1,0] };
+            if (dirs[e.key]) {
+                ws.send(JSON.stringify({ type: 'dir', dir: { x: dirs[e.key][0], y: dirs[e.key][1] } }));
+            }
+        });
+
+        function draw() {
+            if (!gameState) return requestAnimationFrame(draw);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Еда
+            gameState.foods.forEach(f => {
+                ctx.fillStyle = '#f0c929';
+                ctx.fillRect(f.x * SIZE + 3, f.y * SIZE + 3, SIZE - 6, SIZE - 6);
+            });
+
+            // Игроки
+            const colors = ['#00ff88', '#ff6b6b'];
+            gameState.players.forEach((p, i) => {
+                p.snake.forEach((s, j) => {
+                    ctx.fillStyle = j === 0 ? colors[i] : `rgba(${i === 0 ? '0,255,136' : '255,107,107'}, ${0.5 - j * 0.02})`;
+                    ctx.fillRect(s.x * SIZE + 1, s.y * SIZE + 1, SIZE - 2, SIZE - 2);
+                });
+            });
+
+            document.getElementById('myScore').textContent = gameState.players[playerId]?.score || 0;
+            document.getElementById('enemyScore').textContent = gameState.players[1 - playerId]?.score || 0;
+
+            requestAnimationFrame(draw);
+        }
+        draw();
+    </script>
+</body>
+</html>
