@@ -27,6 +27,7 @@
             cursor: pointer;
             margin: 5px;
         }
+        button:hover { background: #ff6b6b; }
         input {
             padding: 8px;
             border-radius: 6px;
@@ -39,17 +40,18 @@
         #menu { margin: 15px 0; }
         #status { color: #f0c929; }
         .hidden { display: none; }
+        #winner { font-size: 24px; margin-top: 10px; color: #f0c929; }
     </style>
 </head>
 <body>
-    <h2>🐍 Змейка-дуэль</h2>
+    <h2>🐍 ДУЭЛЬ</h2>
     <div id="menu">
-        <button onclick="create()">Создать игру</button>
-        <br>
-        <input id="codeInput" placeholder="Код комнаты">
+        <button onclick="create()">Создать</button>
+        <br><br>
+        <input id="codeInput" placeholder="Код">
         <button onclick="join()">Войти</button>
     </div>
-    <div id="status">Создай комнату или введи код друга</div>
+    <div id="status"></div>
     <div id="gameArea" class="hidden">
         <div id="scores">
             <div class="p1">Ты: <span id="myScore">0</span></div>
@@ -79,7 +81,7 @@
                 if (d.type === 'created') {
                     roomCode = d.code;
                     playerId = d.playerId;
-                    document.getElementById('status').textContent = `Код комнаты: ${roomCode} (жди друга)`;
+                    document.getElementById('status').textContent = `Код: ${roomCode}`;
                     document.getElementById('codeInput').value = roomCode;
                 }
                 handleMessage(d);
@@ -94,12 +96,12 @@
             ws.onopen = () => ws.send(JSON.stringify({ type: 'join', code }));
             ws.onmessage = e => {
                 const d = JSON.parse(e.data);
-                if (d.type === 'error') alert(d.msg);
-                else if (d.type === 'start') {
+                if (d.type === 'error') { document.getElementById('status').textContent = 'Ошибка'; return; }
+                if (d.type === 'start') {
                     playerId = d.playerId;
                     document.getElementById('menu').classList.add('hidden');
                     document.getElementById('gameArea').classList.remove('hidden');
-                    document.getElementById('status').textContent = 'Игра началась!';
+                    document.getElementById('status').classList.add('hidden');
                 }
                 handleMessage(d);
             };
@@ -108,31 +110,30 @@
         function handleMessage(d) {
             if (d.type === 'update') gameState = d;
             if (d.type === 'winner') {
-                document.getElementById('winner').textContent = d.playerId === playerId ? 'Ты победил!' : 'Ты проиграл!';
+                document.getElementById('winner').textContent = d.playerId === playerId ? 'Победа!' : 'Поражение';
             }
-            if (d.type === 'draw') document.getElementById('winner').textContent = 'Ничья!';
-            if (d.type === 'opponent_left') document.getElementById('status').textContent = 'Соперник вышел';
+            if (d.type === 'draw') document.getElementById('winner').textContent = 'Ничья';
+            if (d.type === 'opponent_left') {
+                document.getElementById('status').classList.remove('hidden');
+                document.getElementById('status').textContent = 'Отключился';
+            }
         }
 
         document.addEventListener('keydown', e => {
             if (!ws) return;
             const dirs = { ArrowUp: [0,-1], ArrowDown: [0,1], ArrowLeft: [-1,0], ArrowRight: [1,0] };
-            if (dirs[e.key]) {
-                ws.send(JSON.stringify({ type: 'dir', dir: { x: dirs[e.key][0], y: dirs[e.key][1] } }));
-            }
+            if (dirs[e.key]) ws.send(JSON.stringify({ type: 'dir', dir: { x: dirs[e.key][0], y: dirs[e.key][1] } }));
         });
 
         function draw() {
             if (!gameState) return requestAnimationFrame(draw);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Еда
             gameState.foods.forEach(f => {
                 ctx.fillStyle = '#f0c929';
                 ctx.fillRect(f.x * SIZE + 3, f.y * SIZE + 3, SIZE - 6, SIZE - 6);
             });
 
-            // Игроки
             const colors = ['#00ff88', '#ff6b6b'];
             gameState.players.forEach((p, i) => {
                 p.snake.forEach((s, j) => {
