@@ -52,9 +52,10 @@
             margin-bottom: 15px;
         }
         #dialog .choices {
-            display: flex;
-            gap: 20px;
-        }
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+		}
         #dialog .choice {
             color: #ffcc00;
             cursor: pointer;
@@ -62,6 +63,19 @@
         #dialog .choice:hover {
             color: #fff;
         }
+		@media (max-width: 600px) {
+    #dialog {
+        height: 250px;
+        font-size: 16px;
+    }
+    #dialog .choices {
+        flex-direction: column;
+        gap: 10px;
+    }
+    #dialog .choice {
+        font-size: 18px;
+    }
+		}
         #video-container {
             position: absolute;
             top: 0; left: 0;
