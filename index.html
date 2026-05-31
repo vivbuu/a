@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>67</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Courier New', monospace;
+        }
+        #game {
+            width: 800px;
+            height: 600px;
+            background: #1a1a2e;
+            position: relative;
+            overflow: hidden;
+        }
+        #scene {
+            width: 100%;
+            height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #scene img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        #dialog {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 200px;
+            background: #000;
+            border: 3px solid #fff;
+            color: #fff;
+            padding: 20px;
+            font-size: 20px;
+            display: none;
+        }
+        #dialog .name {
+            color: #ffcc00;
+            margin-bottom: 10px;
+        }
+        #dialog .text {
+            margin-bottom: 15px;
+        }
+        #dialog .choices {
+            display: flex;
+            gap: 20px;
+        }
+        #dialog .choice {
+            color: #ffcc00;
+            cursor: pointer;
+        }
+        #dialog .choice:hover {
+            color: #fff;
+        }
+        #video-container {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: none;
+            background: #000;
+        }
+        #video-container video {
+            width: 100%; height: 100%;
+        }
+        #hint {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            color: #fff;
+            font-size: 14px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+	<div id="start-screen" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#000;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:10;">
+    <button id="start-btn" style="padding:20px 40px;font-size:24px;background:#ffcc00;border:none;border-radius:10px;cursor:pointer;font-family:'Courier New',monospace;margin-bottom:30px;">СЕРГЕЙ МИХАЙЛОВИЧ STORY</button>
+    <p style="color:#fff;font-family:'Courier New',monospace;font-size:16px;">инструкция: сделать выбор; включить звук ради сергея михайловича</p>
+</div>
+    <div id="game">
+        <div id="scene">
+            <img id="scene-img" src="" alt="">
+        </div>
+        <div id="dialog">
+            <div class="name" id="dialog-name"></div>
+            <div class="text" id="dialog-text"></div>
+            <div class="choices" id="dialog-choices"></div>
+        </div>
+        <div id="video-container">
+            <video id="video-player" controls></video>
+        </div>
+        <div id="hint">ы</div>
+    </div>
+
+    <script>
+		
+		const sceneImg = document.getElementById('scene-img');
+const dialogBox = document.getElementById('dialog');
+const dialogName = document.getElementById('dialog-name');
+const dialogText = document.getElementById('dialog-text');
+const dialogChoices = document.getElementById('dialog-choices');
+const hint = document.getElementById('hint');
+const videoContainer = document.getElementById('video-container');
+const videoPlayer = document.getElementById('video-player');
+let dialogOpen = false;
+
+function playVideo(src) {
+    dialogBox.style.display = 'none';
+    hint.style.display = 'none';
+    videoContainer.style.display = 'block';
+    videoPlayer.src = src;
+    videoPlayer.play();
+    videoPlayer.addEventListener('ended', () => {
+        videoContainer.style.display = 'none';
+        sceneImg.src = "scene2.png";
+        dialogBox.style.display = 'block';
+        dialogName.textContent = "";
+        dialogText.textContent = "а всё";
+        dialogChoices.innerHTML = '';
+        localStorage.setItem('krakovskiy_watched', 'true');
+    });
+}
+		
+		
+        // ===== ДАННЫЕ: МЕНЯЙ ЗДЕСЬ =====
+     const scenes = [
+    {
+        id: 0,
+        image: "scene1.png",
+        dialog: "ДУМАЛИ ВЫ БОЛЬШЕ НЕ УВИДЕТЕ РАВНОБЕДРЕННЫЙ ТРЕУГОЛЬНИК!? А НЕТ! 'Летний практикум 2026 из 7 в 8.pdf'",
+        name: "сергей михайлович",
+        choices: [
+            { text: "ДА, СПАСИБО СЕРГЕЙ МИХАЙЛОВИЧ!!!!", next: 1 },
+            { text: "отказано", next: 2 }
+        ],
+        audio: "dialog1.mp3"
+    },
+    {
+        id: 1,
+        image: "scene3.png",
+        dialog: "*вы поднялись в глазах сергея михайловича (ну и всё типаэ)*",
+        name: "...",
+        choices: [],
+        audio: "dialog2.mp3"
+    },
+    {
+        id: 2,
+        image: "scene2.png",
+        dialog: "...",
+        name: "сергей михайлович",
+        choices: [],
+        video: "final.mp4"
+    }
+];
+
+const videoWatched = localStorage.getItem('krakovskiy_watched') === 'true';
+
+if (videoWatched) {
+  
+    window.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('start-screen').style.display = 'none';
+        sceneImg.src = "scene2.png";
+        dialogBox.style.display = 'block';
+        dialogName.textContent = "";
+        dialogText.textContent = "А ВСЁ";
+        dialogChoices.innerHTML = '';
+        hint.style.display = 'none';
+    });
+}
+
+let audio = null;
+
+function showSceneById(id) {
+    const scene = scenes.find(s => s.id === id);
+    if (!scene) return;
+    
+    sceneImg.src = scene.image;
+    dialogOpen = true;
+    dialogBox.style.display = 'block';
+    hint.style.display = 'block';
+    dialogName.textContent = scene.name;
+    dialogText.textContent = scene.dialog;
+    dialogChoices.innerHTML = '';
+
+    if (scene.audio) {
+        if (audio) { audio.pause(); audio = null; }
+        audio = new Audio(scene.audio);
+        audio.play();
+    }
+
+    if (scene.choices && scene.choices.length > 0) {
+        scene.choices.forEach(choice => {
+            const span = document.createElement('span');
+            span.className = 'choice';
+            span.textContent = choice.text;
+            span.addEventListener('click', () => {
+                if (audio) { audio.pause(); audio = null; }
+                dialogBox.style.display = 'none';
+                hint.style.display = 'none';
+                dialogOpen = false;
+                showSceneById(choice.next);
+            });
+            dialogChoices.appendChild(span);
+        });
+    }
+
+    if (scene.video) {
+        setTimeout(() => playVideo(scene.video), 1500);
+    }
+}
+
+document.getElementById('start-btn').addEventListener('click', () => {
+    document.getElementById('start-screen').style.display = 'none';
+    showSceneById(0);
+});
+
+    </script>
+</body>
+</html>
